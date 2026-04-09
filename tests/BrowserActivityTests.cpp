@@ -31,6 +31,7 @@ void TestParseValidMessage() {
             "name": "Example Show",
             "details": "Example Show",
             "state": "Episode 3",
+            "type": "watching",
             "statusDisplayType": "details",
             "showElapsedTime": true,
             "startedAtUnixSeconds": 1710000000,
@@ -59,6 +60,7 @@ void TestParseValidMessage() {
     Expect(snapshot.activityDisposition == drpc::BrowserActivityDisposition::Publish, "activityDisposition should parse");
     Expect(snapshot.activityCard.has_value(), "activityCard should parse");
     Expect(snapshot.activityCard->details == "Example Show", "activityCard details should parse");
+    Expect(snapshot.activityCard->type == drpc::ActivityType::Watching, "activityCard type should parse");
     Expect(snapshot.activityCard->assets.largeImage == "https://cdn.example.com/poster.jpg", "activityCard largeImage should parse");
 }
 
@@ -93,6 +95,7 @@ void TestProjectPublishedCard() {
         .details = "Example Show",
         .state = "Episode 3",
         .assets = drpc::ActivityAssets{"https://cdn.example.com/poster.jpg", "Episode 3", "https://www.9animetv.to/watch/example", "", "", ""},
+        .type = drpc::ActivityType::Watching,
         .statusDisplayType = drpc::StatusDisplayType::Details,
         .showElapsedTime = true,
         .startedAtUnixSeconds = 1710000000,
@@ -108,6 +111,7 @@ void TestProjectPublishedCard() {
     Expect(projection.activity.disposition == drpc::SourceActivityDisposition::Publish, "published card should publish");
     Expect(projection.activity.preset.has_value(), "published card should preserve preset");
     Expect(projection.activity.preset->details == "Example Show", "published card should use activityCard details");
+    Expect(projection.activity.preset->type == drpc::ActivityType::Watching, "published card should preserve watching type");
     Expect(projection.activity.preset->endAtUnixSeconds.has_value(), "published card should keep timestamps");
     Expect(projection.sourceStatus == L"Browser connected", "published card should be connected");
 }
@@ -125,6 +129,7 @@ void TestProjectStickyCard() {
         .name = "Example Show",
         .details = "Example Show",
         .state = "Episode 3",
+        .type = drpc::ActivityType::Watching,
     };
     snapshot.sentAtUnixMs = 1710000000123;
 
@@ -170,6 +175,7 @@ void TestProjectUnsupportedSiteFilter() {
         .name = "Example Show",
         .details = "Example Show",
         .state = "Episode 3",
+        .type = drpc::ActivityType::Watching,
     };
     snapshot.sentAtUnixMs = 1710000000123;
 
@@ -196,6 +202,7 @@ void TestProjectStaleSnapshot() {
         .name = "Example Show",
         .details = "Example Show",
         .state = "Episode 3",
+        .type = drpc::ActivityType::Watching,
     };
     snapshot.sentAtUnixMs = 1710000000123;
 
@@ -208,11 +215,36 @@ void TestProjectStaleSnapshot() {
     Expect(projection.sourceStatus == L"Browser stale", "stale snapshot should mark browser stale");
 }
 
+void TestParseBrowserActivityDefaultsToWatchingType() {
+    const std::string payload = R"({
+        "schemaVersion": 2,
+        "browser": "chrome",
+        "url": "https://example.com/watch",
+        "host": "example.com",
+        "pageTitle": "Example",
+        "playbackState": "playing",
+        "activityDisposition": "publish",
+        "activityCard": {
+            "name": "Example",
+            "details": "Episode 1",
+            "state": "Now"
+        },
+        "sentAtUnixMs": 1710000000123
+    })";
+
+    drpc::BrowserActivitySnapshot snapshot;
+    std::string error;
+    Expect(drpc::ParseBrowserActivityMessage(payload, snapshot, error), "expected browser payload without type to parse");
+    Expect(snapshot.activityCard.has_value(), "activityCard should exist");
+    Expect(snapshot.activityCard->type == drpc::ActivityType::Watching, "browser activityCard should default to watching");
+}
+
 }  // namespace
 
 int main() {
     TestParseValidMessage();
     TestRejectInvalidSchemaVersion();
+    TestParseBrowserActivityDefaultsToWatchingType();
     TestProjectPublishedCard();
     TestProjectStickyCard();
     TestProjectClearDisposition();

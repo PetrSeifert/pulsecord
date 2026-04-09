@@ -17,6 +17,7 @@
       "name": "Coding",
       "details": "Working on drpc",
       "state": "Writing C++",
+      "type": "playing",
       "statusDisplayType": "details",
       "showElapsedTime": true,
       "assets": {
@@ -36,6 +37,7 @@
       "name": "Gaming",
       "details": "Playing something fun",
       "state": "In a session",
+      "type": "playing",
       "statusDisplayType": "name",
       "showElapsedTime": true,
       "assets": {
@@ -49,6 +51,7 @@
       "name": "Watching Video",
       "details": "Watching a video",
       "state": "Full screen",
+      "type": "watching",
       "statusDisplayType": "state",
       "showElapsedTime": true,
       "assets": {
@@ -62,6 +65,7 @@
       "name": "Idle",
       "details": "Away from keyboard",
       "state": "Be right back",
+      "type": "playing",
       "statusDisplayType": "name",
       "showElapsedTime": false,
       "assets": {

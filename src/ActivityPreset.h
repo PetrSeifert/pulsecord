@@ -7,6 +7,11 @@
 
 namespace drpc {
 
+enum class ActivityType {
+    Playing,
+    Watching,
+};
+
 enum class StatusDisplayType {
     Name,
     State,
@@ -35,6 +40,7 @@ struct ActivityPreset {
     std::string stateUrl;
     ActivityAssets assets;
     std::vector<ActivityButton> buttons;
+    ActivityType type = ActivityType::Playing;
     StatusDisplayType statusDisplayType = StatusDisplayType::Name;
     bool showElapsedTime = true;
     std::optional<std::int64_t> startedAtUnixSeconds;

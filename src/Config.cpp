@@ -31,6 +31,24 @@ std::string ToConfigString(ActivityMode value) {
     }
 }
 
+ActivityType ParseActivityType(const std::string& value) {
+    if (value == "watching") {
+        return ActivityType::Watching;
+    }
+
+    return ActivityType::Playing;
+}
+
+std::string ToConfigString(ActivityType value) {
+    switch (value) {
+    case ActivityType::Watching:
+        return "watching";
+    case ActivityType::Playing:
+    default:
+        return "playing";
+    }
+}
+
 StatusDisplayType ParseStatusDisplayType(const std::string& value) {
     if (value == "state") {
         return StatusDisplayType::State;
@@ -60,6 +78,7 @@ ActivityPreset ParsePreset(const json& item) {
     preset.detailsUrl = item.value("detailsUrl", "");
     preset.state = item.value("state", "");
     preset.stateUrl = item.value("stateUrl", "");
+    preset.type = ParseActivityType(item.value("type", "playing"));
     preset.statusDisplayType = ParseStatusDisplayType(item.value("statusDisplayType", "name"));
     preset.showElapsedTime = item.value("showElapsedTime", true);
 
@@ -94,6 +113,7 @@ json SerializePreset(const ActivityPreset& preset) {
     item["detailsUrl"] = preset.detailsUrl;
     item["state"] = preset.state;
     item["stateUrl"] = preset.stateUrl;
+    item["type"] = ToConfigString(preset.type);
     item["statusDisplayType"] = ToConfigString(preset.statusDisplayType);
     item["showElapsedTime"] = preset.showElapsedTime;
     item["assets"] = {
@@ -182,6 +202,7 @@ AppConfig ConfigLoader::MakeDefault() {
             .stateUrl = "",
             .assets = ActivityAssets{"coding", "Coding", "", "keyboard", "Focused", ""},
             .buttons = {ActivityButton{"Source", "https://github.com/"}},
+            .type = ActivityType::Playing,
             .statusDisplayType = StatusDisplayType::Details,
             .showElapsedTime = true,
         },
@@ -193,6 +214,7 @@ AppConfig ConfigLoader::MakeDefault() {
             .stateUrl = "",
             .assets = ActivityAssets{"gaming", "Gaming", "", "controller", "Relaxing", ""},
             .buttons = {},
+            .type = ActivityType::Playing,
             .statusDisplayType = StatusDisplayType::Name,
             .showElapsedTime = true,
         },
@@ -204,6 +226,7 @@ AppConfig ConfigLoader::MakeDefault() {
             .stateUrl = "",
             .assets = ActivityAssets{"video", "Watching", "", "play", "Now playing", ""},
             .buttons = {},
+            .type = ActivityType::Watching,
             .statusDisplayType = StatusDisplayType::State,
             .showElapsedTime = true,
         },
@@ -215,6 +238,7 @@ AppConfig ConfigLoader::MakeDefault() {
             .stateUrl = "",
             .assets = ActivityAssets{"idle", "Idle", "", "moon", "AFK", ""},
             .buttons = {},
+            .type = ActivityType::Playing,
             .statusDisplayType = StatusDisplayType::Name,
             .showElapsedTime = false,
         },

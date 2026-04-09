@@ -35,6 +35,16 @@ std::string StatusDisplayTypeToString(StatusDisplayType type) {
     }
 }
 
+discordpp::ActivityTypes ToDiscordActivityType(ActivityType type) {
+    switch (type) {
+    case ActivityType::Watching:
+        return discordpp::ActivityTypes::Watching;
+    case ActivityType::Playing:
+    default:
+        return discordpp::ActivityTypes::Playing;
+    }
+}
+
 class NoopDiscordPresenceBackend final : public IDiscordPresenceBackend {
 public:
     bool Initialize(const std::string& applicationId, Logger& logger) override {
@@ -105,7 +115,7 @@ public:
         }
 
         discordpp::Activity activity;
-        activity.SetType(discordpp::ActivityTypes::Playing);
+        activity.SetType(ToDiscordActivityType(preset.type));
         activity.SetDetails(preset.details);
         activity.SetState(preset.state);
 
