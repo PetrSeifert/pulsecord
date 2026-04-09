@@ -67,6 +67,10 @@ Default browser mode uses:
 - bundled site-defined activity cards for supported browser pages
 - no generic browser-card fallback when the active page is unmatched
 
+Per-site browser detector configuration now lives in
+`external/drpc-browser-extension/site-config.js`. Reload the unpacked extension
+after editing it.
+
 ## Run browser mode
 
 1. Build the tray app and native host.
