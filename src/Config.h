@@ -8,9 +8,23 @@
 
 namespace drpc {
 
+enum class ActivityMode {
+    Mock,
+    Browser,
+};
+
+struct BrowserDetectionConfig {
+    bool enabled = true;
+    unsigned int staleAfterMs = 45000;
+    std::string fallbackPreset = "Idle";
+    std::vector<std::string> supportedSites = {"crunchyroll", "hidive"};
+};
+
 struct AppConfig {
     std::string applicationId;
     unsigned int updateIntervalMs = 15000;
+    ActivityMode activityMode = ActivityMode::Browser;
+    BrowserDetectionConfig browserDetection;
     std::vector<ActivityPreset> presets;
 };
 

@@ -13,6 +13,24 @@ namespace {
 
 using json = nlohmann::json;
 
+ActivityMode ParseActivityMode(const std::string& value) {
+    if (value == "mock") {
+        return ActivityMode::Mock;
+    }
+
+    return ActivityMode::Browser;
+}
+
+std::string ToConfigString(ActivityMode value) {
+    switch (value) {
+    case ActivityMode::Mock:
+        return "mock";
+    case ActivityMode::Browser:
+    default:
+        return "browser";
+    }
+}
+
 StatusDisplayType ParseStatusDisplayType(const std::string& value) {
     if (value == "state") {
         return StatusDisplayType::State;
@@ -117,6 +135,22 @@ AppConfig ConfigLoader::LoadOrCreate(const std::filesystem::path& path) {
     AppConfig config;
     config.applicationId = root.value("applicationId", "");
     config.updateIntervalMs = root.value("updateIntervalMs", 15000U);
+    config.activityMode = ParseActivityMode(root.value("activityMode", "browser"));
+
+    if (root.contains("browserDetection") && root["browserDetection"].is_object()) {
+        const auto& browserDetection = root["browserDetection"];
+        config.browserDetection.enabled = browserDetection.value("enabled", true);
+        config.browserDetection.staleAfterMs = browserDetection.value("staleAfterMs", 45000U);
+        config.browserDetection.fallbackPreset = browserDetection.value("fallbackPreset", "Idle");
+        if (browserDetection.contains("supportedSites") && browserDetection["supportedSites"].is_array()) {
+            config.browserDetection.supportedSites.clear();
+            for (const auto& site : browserDetection["supportedSites"]) {
+                if (site.is_string()) {
+                    config.browserDetection.supportedSites.push_back(site.get<std::string>());
+                }
+            }
+        }
+    }
 
     if (root.contains("presets") && root["presets"].is_array()) {
         for (const auto& item : root["presets"]) {
@@ -136,6 +170,8 @@ AppConfig ConfigLoader::MakeDefault() {
     AppConfig config;
     config.applicationId = "1491798009942507712";
     config.updateIntervalMs = 15000;
+    config.activityMode = ActivityMode::Browser;
+    config.browserDetection = BrowserDetectionConfig{};
 
     config.presets = {
         ActivityPreset{
@@ -194,6 +230,13 @@ void ConfigLoader::WriteDefault(const std::filesystem::path& path) {
     json root;
     root["applicationId"] = config.applicationId;
     root["updateIntervalMs"] = config.updateIntervalMs;
+    root["activityMode"] = ToConfigString(config.activityMode);
+    root["browserDetection"] = {
+        {"enabled", config.browserDetection.enabled},
+        {"staleAfterMs", config.browserDetection.staleAfterMs},
+        {"fallbackPreset", config.browserDetection.fallbackPreset},
+        {"supportedSites", config.browserDetection.supportedSites},
+    };
     root["presets"] = json::array();
 
     for (const auto& preset : config.presets) {

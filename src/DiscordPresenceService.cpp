@@ -215,15 +215,19 @@ void DiscordPresenceService::Initialize() {
 }
 
 void DiscordPresenceService::PublishCurrent(bool force) {
-    PublishPreset(source_.Current(), force);
+    PublishActivity(source_.Current(), force);
 }
 
 void DiscordPresenceService::NextPreset() {
-    PublishPreset(source_.Next(), true);
+    if (source_.Next()) {
+        PublishCurrent(true);
+    }
 }
 
 void DiscordPresenceService::PreviousPreset() {
-    PublishPreset(source_.Previous(), true);
+    if (source_.Previous()) {
+        PublishCurrent(true);
+    }
 }
 
 void DiscordPresenceService::Pause() {
@@ -265,29 +269,32 @@ std::wstring DiscordPresenceService::BuildStatusText() const {
     if (paused_) {
         status << L"Paused";
     } else {
-        status << ToWide(source_.Current().name);
+        const auto activity = source_.Current();
+        status << (activity.label.empty() ? L"Activity" : activity.label);
+    }
+
+    const auto sourceStatus = source_.SourceStatus();
+    if (!sourceStatus.empty()) {
+        status << L" | " << sourceStatus;
     }
     status << L" | " << backend_->StatusText();
     return status.str();
 }
 
 std::wstring DiscordPresenceService::BuildPresetLabel() const {
-    std::wostringstream label;
-    label << L"Preset " << (source_.CurrentIndex() + 1) << L"/" << source_.Count() << L": " << ToWide(source_.Current().name);
-    return label.str();
+    return source_.BuildMenuLabel();
 }
 
-void DiscordPresenceService::PublishPreset(const ActivityPreset& preset, bool force) {
+void DiscordPresenceService::PublishActivity(const SourceActivity& activity, bool force) {
     if (paused_) {
         return;
     }
 
-    const auto currentIndex = source_.CurrentIndex();
-    if (force || !lastPublishedIndex_.has_value() || lastPublishedIndex_.value() != currentIndex) {
+    if (force || !lastPublishedIdentity_.has_value() || lastPublishedIdentity_.value() != activity.identity) {
         presetStartedAt_ = std::chrono::system_clock::now();
     }
 
-    ActivityPreset snapshot = preset;
+    ActivityPreset snapshot = activity.preset;
     if (snapshot.showElapsedTime && presetStartedAt_.has_value()) {
         snapshot.startedAtUnixSeconds = std::chrono::system_clock::to_time_t(presetStartedAt_.value());
     } else {
@@ -295,7 +302,7 @@ void DiscordPresenceService::PublishPreset(const ActivityPreset& preset, bool fo
     }
 
     backend_->Publish(snapshot, logger_);
-    lastPublishedIndex_ = currentIndex;
+    lastPublishedIdentity_ = activity.identity;
 }
 
 std::unique_ptr<IDiscordPresenceBackend> CreateDiscordPresenceBackend() {

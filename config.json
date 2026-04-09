@@ -1,6 +1,16 @@
 {
   "applicationId": "1491798009942507712",
   "updateIntervalMs": 15000,
+  "activityMode": "browser",
+  "browserDetection": {
+    "enabled": true,
+    "staleAfterMs": 45000,
+    "fallbackPreset": "Idle",
+    "supportedSites": [
+      "crunchyroll",
+      "hidive"
+    ]
+  },
   "presets": [
     {
       "name": "Coding",

@@ -1,52 +1,41 @@
 # drpc
 
-`drpc` is a Windows tray app prototype for publishing Discord Rich Presence from mock desktop activities.
+`drpc` is a Windows tray app for publishing Discord Rich Presence from desktop activity. The repo now supports two activity modes:
 
-It is set up to prefer the official Discord Social SDK, but the repository builds without the SDK present so you can work on the app shell immediately. When the SDK is missing, the app runs with a no-op backend and logs what it would have published.
+- `browser`: real browser activity sent from a Chromium extension through a native messaging host
+- `mock`: the original preset rotator for local testing
 
-## What v1 does
+## Repo layout
 
-- Runs as a background Windows tray app
-- Loads `config.json`
-- Cycles between editable mock presets
-- Supports pause, resume, previous preset, next preset, open logs, and quit
-- Publishes Rich Presence through the Discord Social SDK when the SDK is installed
+- `src/`: Windows tray app, Discord backend, browser named-pipe source, native messaging host
+- `protocol/`: versioned browser activity contract shared by the app and extension
+- `external/drpc-browser-extension/`: pinned git submodule for the standalone MV3 browser extension
+- `scripts/Register-NativeHost.ps1`: registers the native messaging host manifest for Chromium browsers
+
+## What browser mode does
+
+- Keeps the tray app as the only process that talks to Discord
+- Accepts normalized browser snapshots over `\\.\pipe\drpc-browser-activity`
+- Uses a dedicated native messaging host executable, `drpc_native_host.exe`
+- Supports rich site metadata for Crunchyroll and HIDIVE in the linked browser extension
+- Falls back to generic active-tab title and host when a site adapter is not available
+- Falls back to the configured idle preset when browser data is stale or paused
 
 ## Requirements
 
 - Windows 10 or Windows 11
 - CMake 3.24+
 - Visual Studio 2022 with Desktop development for C++
-- Discord desktop client running for direct Rich Presence testing
+- Discord desktop client running for Rich Presence testing
+- A Chromium-based browser for browser mode
 
-## Add the Discord Social SDK
+## Clone
 
-The official SDK binaries are distributed through the Discord Developer Portal after you enable the Social SDK for your application.
-
-1. Create a Discord application in the Developer Portal.
-2. Enable the Discord Social SDK for that application.
-3. Download the Windows SDK package.
-4. Place the package so this header exists:
-
-```text
-vendor/discord_social_sdk/include/discordpp.h
-```
-
-5. Make sure the import library is reachable from one of these locations, or pass `-DDRPC_SDK_LIBRARY=...` to CMake:
-
-```text
-vendor/discord_social_sdk/lib/
-vendor/discord_social_sdk/lib/debug/
-vendor/discord_social_sdk/lib/release/
-```
-
-If your SDK layout differs, configure both of these during CMake setup:
+Clone with submodules, or initialize them after cloning:
 
 ```powershell
-cmake -S . -B build `
-  -G "Visual Studio 17 2022" -A x64 `
-  -DDRPC_SDK_INCLUDE_DIR="C:/path/to/sdk/include" `
-  -DDRPC_SDK_LIBRARY="C:/path/to/discord_partner_sdk.lib"
+git clone --recurse-submodules <repo-url>
+git submodule update --init --recursive
 ```
 
 ## Build
@@ -56,34 +45,81 @@ cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 cmake --build build --config Debug
 ```
 
-## Run
+Built targets:
+
+- `build/drpc.exe`
+- `build/drpc_native_host.exe`
+- `build/drpc_tests.exe` when testing is enabled
+
+## Configure
+
+`config.json` now includes browser mode settings:
+
+- `activityMode`: `browser` or `mock`
+- `browserDetection.enabled`
+- `browserDetection.staleAfterMs`
+- `browserDetection.fallbackPreset`
+- `browserDetection.supportedSites[]`
+
+Default browser mode uses:
+
+- `Watching Video` as the active visual template
+- `Idle` as the fallback preset when browser data is stale, paused, or missing
+
+## Run browser mode
+
+1. Build the tray app and native host.
+2. Load `external/drpc-browser-extension/` as an unpacked extension.
+3. Copy the extension ID from the browser's extensions page.
+4. Register the native host:
+
+```powershell
+.\scripts\Register-NativeHost.ps1 `
+  -HostPath .\build\drpc_native_host.exe `
+  -ExtensionIds <extension-id> `
+  -Browsers chrome,edge
+```
+
+5. Start the tray app:
 
 ```powershell
 .\build\drpc.exe
 ```
 
-On first run, the app creates `config.json` next to the executable if it does not exist yet.
+6. Start playback in the active browser tab.
 
-## Configure
+## Discord Social SDK
 
-Update `config.json` with your real Discord application ID and asset keys. Example fields:
+The app still prefers the official Discord Social SDK, but the repo builds without it so the tray app and native messaging flow can be developed immediately. When the SDK is missing, the app logs what it would have published.
 
-- `applicationId`
-- `updateIntervalMs`
-- `presets[].details`
-- `presets[].state`
-- `presets[].assets.largeImage`
-- `presets[].assets.smallImage`
-- `presets[].buttons`
+Add the SDK under `vendor/discord_social_sdk/` or configure:
 
-Buttons are only visible to other users, so test with a second Discord account.
+```powershell
+cmake -S . -B build `
+  -G "Visual Studio 17 2022" -A x64 `
+  -DDRPC_SDK_INCLUDE_DIR="C:/path/to/sdk/include" `
+  -DDRPC_SDK_LIBRARY="C:/path/to/discord_partner_sdk.lib"
+```
+
+## Tests
+
+Native tests:
+
+```powershell
+ctest --test-dir build --output-on-failure
+```
+
+Extension tests:
+
+```powershell
+cd external/drpc-browser-extension
+npm test
+```
 
 ## Logs
 
-Logs are written to:
+Tray logs are written to:
 
 ```text
 logs/drpc.log
 ```
-
-Use the tray menu item to open the log file quickly.

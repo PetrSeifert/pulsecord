@@ -10,11 +10,12 @@ class MockPresenceSource final : public PresenceSource {
 public:
     explicit MockPresenceSource(std::vector<ActivityPreset> presets);
 
-    const ActivityPreset& Current() const override;
-    const ActivityPreset& Next() override;
-    const ActivityPreset& Previous() override;
-    std::size_t CurrentIndex() const override;
-    std::size_t Count() const override;
+    SourceActivity Current() const override;
+    bool Next() override;
+    bool Previous() override;
+    bool SupportsManualSelection() const override;
+    std::wstring BuildMenuLabel() const override;
+    std::wstring SourceStatus() const override;
 
 private:
     std::vector<ActivityPreset> presets_;

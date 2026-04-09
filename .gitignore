@@ -7,3 +7,4 @@ out/
 *.VC.opendb
 logs/
 vendor/discord_social_sdk/
+external/drpc-browser-extension/node_modules/

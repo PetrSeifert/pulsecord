@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.24)
 
 project(drpc VERSION 0.1.0 LANGUAGES CXX)
 
+include(CTest)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -32,9 +34,14 @@ find_file(DRPC_SDK_DLL
     PATHS ${DRPC_SDK_DLL_HINTS}
     NO_DEFAULT_PATH)
 
-add_executable(drpc WIN32
-    src/main.cpp
+set(DRPC_CORE_SOURCES
     src/ActivityPreset.h
+    src/BrowserActivityProtocol.cpp
+    src/BrowserActivityProtocol.h
+    src/BrowserActivitySource.cpp
+    src/BrowserActivitySource.h
+    src/BrowserPresenceProjection.cpp
+    src/BrowserPresenceProjection.h
     src/Config.cpp
     src/Config.h
     src/DiscordPresenceService.cpp
@@ -43,23 +50,33 @@ add_executable(drpc WIN32
     src/Logging.h
     src/MockPresenceSource.cpp
     src/MockPresenceSource.h
-    src/PresenceSource.h
-    src/TrayApplication.cpp
-    src/TrayApplication.h)
+    src/PresenceSource.h)
 
-target_compile_definitions(drpc PRIVATE NOMINMAX UNICODE _UNICODE WIN32_LEAN_AND_MEAN)
+add_library(drpc_core STATIC ${DRPC_CORE_SOURCES})
 
-target_include_directories(drpc PRIVATE
+target_compile_definitions(drpc_core PUBLIC NOMINMAX UNICODE _UNICODE WIN32_LEAN_AND_MEAN)
+
+target_include_directories(drpc_core PUBLIC
     "${CMAKE_SOURCE_DIR}/src"
     "${CMAKE_SOURCE_DIR}/vendor")
 
-target_link_libraries(drpc PRIVATE shell32)
+add_executable(drpc WIN32
+    src/main.cpp
+    src/TrayApplication.cpp
+    src/TrayApplication.h)
+
+target_link_libraries(drpc PRIVATE drpc_core shell32)
+
+add_executable(drpc_native_host
+    src/NativeMessagingHost.cpp)
+
+target_link_libraries(drpc_native_host PRIVATE drpc_core)
 
 if(EXISTS "${DRPC_SDK_INCLUDE_DIR}/discordpp.h" AND DRPC_SDK_LIBRARY)
     message(STATUS "Discord Social SDK enabled")
-    target_compile_definitions(drpc PRIVATE DRPC_WITH_DISCORD_SDK=1)
-    target_include_directories(drpc PRIVATE "${DRPC_SDK_INCLUDE_DIR}")
-    target_link_libraries(drpc PRIVATE "${DRPC_SDK_LIBRARY}")
+    target_compile_definitions(drpc_core PUBLIC DRPC_WITH_DISCORD_SDK=1)
+    target_include_directories(drpc_core PUBLIC "${DRPC_SDK_INCLUDE_DIR}")
+    target_link_libraries(drpc_core PUBLIC "${DRPC_SDK_LIBRARY}")
 
     if(DRPC_SDK_DLL)
         add_custom_command(TARGET drpc POST_BUILD
@@ -75,3 +92,10 @@ add_custom_command(TARGET drpc POST_BUILD
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different
         "${CMAKE_SOURCE_DIR}/config.json"
         "$<TARGET_FILE_DIR:drpc>/config.json")
+
+if(BUILD_TESTING)
+    add_executable(drpc_tests
+        tests/BrowserActivityTests.cpp)
+    target_link_libraries(drpc_tests PRIVATE drpc_core)
+    add_test(NAME drpc_tests COMMAND drpc_tests)
+endif()

@@ -1,9 +1,10 @@
 #pragma once
 
+#include "BrowserActivitySource.h"
 #include "Config.h"
 #include "DiscordPresenceService.h"
 #include "Logging.h"
-#include "MockPresenceSource.h"
+#include "PresenceSource.h"
 
 #include <filesystem>
 #include <memory>
@@ -21,6 +22,7 @@ public:
 private:
     static constexpr UINT kTrayIconId = 1001;
     static constexpr UINT kWindowMessageTrayIcon = WM_APP + 1;
+    static constexpr UINT kWindowMessageSourceUpdated = WM_APP + 2;
     static constexpr UINT_PTR kTimerPublish = 2001;
     static constexpr UINT_PTR kTimerPumpCallbacks = 2002;
 
@@ -41,6 +43,7 @@ private:
     void OpenLogs() const;
     void HandleCommand(WORD commandId);
     void OnTimer(UINT_PTR timerId);
+    void PublishCurrentActivity(bool force);
 
     static LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
     LRESULT HandleMessage(UINT message, WPARAM wParam, LPARAM lParam);
@@ -54,7 +57,7 @@ private:
     std::filesystem::path logPath_;
     AppConfig config_;
     std::unique_ptr<Logger> logger_;
-    std::unique_ptr<MockPresenceSource> source_;
+    std::unique_ptr<PresenceSource> source_;
     std::unique_ptr<DiscordPresenceService> presenceService_;
 };
 

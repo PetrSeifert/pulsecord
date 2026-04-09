@@ -45,7 +45,7 @@ public:
     std::wstring BuildPresetLabel() const;
 
 private:
-    void PublishPreset(const ActivityPreset& preset, bool force);
+    void PublishActivity(const SourceActivity& activity, bool force);
 
     std::unique_ptr<IDiscordPresenceBackend> backend_;
     PresenceSource& source_;
@@ -53,7 +53,7 @@ private:
     std::string applicationId_;
     bool initialized_ = false;
     bool paused_ = false;
-    std::optional<std::size_t> lastPublishedIndex_;
+    std::optional<std::string> lastPublishedIdentity_;
     std::optional<std::chrono::system_clock::time_point> presetStartedAt_;
 };
 

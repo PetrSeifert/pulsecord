@@ -1,5 +1,7 @@
 #include "TrayApplication.h"
 
+#include "MockPresenceSource.h"
+
 #include <cwchar>
 #include <stdexcept>
 
@@ -54,8 +56,10 @@ bool TrayApplication::Initialize() {
 
     logger_ = std::make_unique<Logger>(logPath_);
     logger_->Info("Starting drpc tray app.");
+    logger_->Info("Loading config from " + configPath_.string() + ".");
 
     config_ = ConfigLoader::LoadOrCreate(configPath_);
+    logger_->Info("Loaded executable-local config.json.");
     if (workspaceConfigPath_ != configPath_ && std::filesystem::exists(workspaceConfigPath_)) {
         const auto workspaceConfig = ConfigLoader::LoadOrCreate(workspaceConfigPath_);
         if (!HasConfiguredApplicationId(config_) && HasConfiguredApplicationId(workspaceConfig)) {
@@ -63,25 +67,39 @@ bool TrayApplication::Initialize() {
             logger_->Info("Using workspace config.json because the executable-local config still has the placeholder application ID.");
         }
     }
-    source_ = std::make_unique<MockPresenceSource>(config_.presets);
-    presenceService_ = std::make_unique<DiscordPresenceService>(
-        CreateDiscordPresenceBackend(),
-        *source_,
-        *logger_,
-        config_.applicationId);
-
+    logger_->Info("Registering tray window class.");
     RegisterWindowClass();
     if (!CreateMessageWindow()) {
         logger_->Error("Failed to create tray window.");
         return false;
     }
 
+    logger_->Info("Creating activity source.");
+    if (config_.activityMode == ActivityMode::Browser) {
+        source_ = std::make_unique<BrowserActivitySource>(config_, *logger_, [this]() {
+            if (windowHandle_) {
+                PostMessageW(windowHandle_, kWindowMessageSourceUpdated, 0, 0);
+            }
+        });
+    } else {
+        source_ = std::make_unique<MockPresenceSource>(config_.presets);
+    }
+    logger_->Info("Creating Discord presence service.");
+    presenceService_ = std::make_unique<DiscordPresenceService>(
+        CreateDiscordPresenceBackend(),
+        *source_,
+        *logger_,
+        config_.applicationId);
+
+    logger_->Info("Adding tray icon.");
     AddTrayIcon();
+    logger_->Info("Updating tray tooltip.");
     UpdateTrayTooltip();
 
     SetTimer(windowHandle_, kTimerPublish, config_.updateIntervalMs, nullptr);
     SetTimer(windowHandle_, kTimerPumpCallbacks, 100, nullptr);
 
+    logger_->Info("Initializing presence backend.");
     presenceService_->Initialize();
     UpdateTrayTooltip();
     logger_->Info("drpc initialized successfully.");
@@ -143,7 +161,9 @@ void TrayApplication::AddTrayIcon() {
     notifyIconData_.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
     CopyTooltip(L"drpc", notifyIconData_.szTip);
 
-    Shell_NotifyIconW(NIM_ADD, &notifyIconData_);
+    if (!Shell_NotifyIconW(NIM_ADD, &notifyIconData_) && logger_) {
+        logger_->Error("Shell_NotifyIconW(NIM_ADD) failed.");
+    }
 }
 
 void TrayApplication::RemoveTrayIcon() {
@@ -160,8 +180,9 @@ void TrayApplication::ShowContextMenu(POINT cursorPosition) {
 
     AppendMenuW(menu, MF_STRING | MF_GRAYED, 0, presenceService_->BuildPresetLabel().c_str());
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(menu, MF_STRING, kMenuPreviousPreset, L"Previous preset");
-    AppendMenuW(menu, MF_STRING, kMenuNextPreset, L"Next preset");
+    const auto navigationFlags = source_ && source_->SupportsManualSelection() ? MF_STRING : (MF_STRING | MF_GRAYED);
+    AppendMenuW(menu, navigationFlags, kMenuPreviousPreset, L"Previous preset");
+    AppendMenuW(menu, navigationFlags, kMenuNextPreset, L"Next preset");
     AppendMenuW(menu, MF_STRING, kMenuPauseResume, presenceService_->IsPaused() ? L"Resume updates" : L"Pause updates");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(menu, MF_STRING, kMenuOpenLogs, L"Open logs");
@@ -177,7 +198,9 @@ void TrayApplication::UpdateTrayTooltip() {
     const auto tooltip = presenceService_ ? presenceService_->BuildStatusText() : L"drpc";
     notifyIconData_.uFlags = NIF_TIP;
     CopyTooltip(tooltip, notifyIconData_.szTip);
-    Shell_NotifyIconW(NIM_MODIFY, &notifyIconData_);
+    if (!Shell_NotifyIconW(NIM_MODIFY, &notifyIconData_) && logger_) {
+        logger_->Warn("Shell_NotifyIconW(NIM_MODIFY) failed.");
+    }
 }
 
 void TrayApplication::OpenLogs() const {
@@ -219,8 +242,7 @@ void TrayApplication::OnTimer(UINT_PTR timerId) {
 
     switch (timerId) {
     case kTimerPublish:
-        presenceService_->PublishCurrent(false);
-        UpdateTrayTooltip();
+        PublishCurrentActivity(false);
         break;
     case kTimerPumpCallbacks:
         presenceService_->PumpCallbacks();
@@ -228,6 +250,15 @@ void TrayApplication::OnTimer(UINT_PTR timerId) {
     default:
         break;
     }
+}
+
+void TrayApplication::PublishCurrentActivity(bool force) {
+    if (!presenceService_) {
+        return;
+    }
+
+    presenceService_->PublishCurrent(force);
+    UpdateTrayTooltip();
 }
 
 LRESULT CALLBACK TrayApplication::WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -253,6 +284,9 @@ LRESULT TrayApplication::HandleMessage(UINT message, WPARAM wParam, LPARAM lPara
         return 0;
     case WM_TIMER:
         OnTimer(static_cast<UINT_PTR>(wParam));
+        return 0;
+    case kWindowMessageSourceUpdated:
+        PublishCurrentActivity(true);
         return 0;
     case WM_DESTROY:
         PostQuitMessage(0);

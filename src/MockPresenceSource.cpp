@@ -1,5 +1,8 @@
 #include "MockPresenceSource.h"
 
+#include "Config.h"
+
+#include <sstream>
 #include <stdexcept>
 #include <utility>
 
@@ -11,26 +14,37 @@ MockPresenceSource::MockPresenceSource(std::vector<ActivityPreset> presets) : pr
     }
 }
 
-const ActivityPreset& MockPresenceSource::Current() const {
-    return presets_.at(currentIndex_);
+SourceActivity MockPresenceSource::Current() const {
+    const auto& preset = presets_.at(currentIndex_);
+    return SourceActivity{
+        .preset = preset,
+        .identity = "mock:" + std::to_string(currentIndex_),
+        .label = ToWide(preset.name),
+    };
 }
 
-const ActivityPreset& MockPresenceSource::Next() {
+bool MockPresenceSource::Next() {
     currentIndex_ = (currentIndex_ + 1) % presets_.size();
-    return Current();
+    return true;
 }
 
-const ActivityPreset& MockPresenceSource::Previous() {
+bool MockPresenceSource::Previous() {
     currentIndex_ = currentIndex_ == 0 ? presets_.size() - 1 : currentIndex_ - 1;
-    return Current();
+    return true;
 }
 
-std::size_t MockPresenceSource::CurrentIndex() const {
-    return currentIndex_;
+bool MockPresenceSource::SupportsManualSelection() const {
+    return true;
 }
 
-std::size_t MockPresenceSource::Count() const {
-    return presets_.size();
+std::wstring MockPresenceSource::BuildMenuLabel() const {
+    std::wostringstream label;
+    label << L"Preset " << (currentIndex_ + 1) << L"/" << presets_.size() << L": " << ToWide(presets_.at(currentIndex_).name);
+    return label.str();
+}
+
+std::wstring MockPresenceSource::SourceStatus() const {
+    return L"Mock source";
 }
 
 }  // namespace drpc

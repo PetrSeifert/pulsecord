@@ -1,0 +1,3 @@
+[submodule "external/drpc-browser-extension"]
+	path = external/drpc-browser-extension
+	url = https://github.com/PetrSeifert/pulsecord-browser-extension
