@@ -8,3 +8,4 @@ out/
 logs/
 vendor/discord_social_sdk/
 external/drpc-browser-extension/node_modules/
+external/drpc-browser-extension/dist/
