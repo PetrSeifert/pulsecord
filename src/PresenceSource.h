@@ -2,14 +2,21 @@
 
 #include "ActivityPreset.h"
 
+#include <optional>
 #include <string>
 
 namespace drpc {
 
+enum class SourceActivityDisposition {
+    Publish,
+    Clear,
+};
+
 struct SourceActivity {
-    ActivityPreset preset;
+    std::optional<ActivityPreset> preset;
     std::string identity;
     std::wstring label;
+    SourceActivityDisposition disposition = SourceActivityDisposition::Publish;
 };
 
 class PresenceSource {

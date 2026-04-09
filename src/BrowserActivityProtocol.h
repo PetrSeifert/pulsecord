@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ActivityPreset.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -8,7 +10,7 @@
 
 namespace drpc {
 
-inline constexpr int kBrowserActivitySchemaVersion = 1;
+inline constexpr int kBrowserActivitySchemaVersion = 2;
 inline constexpr std::size_t kMaxBrowserActivityMessageBytes = 64 * 1024;
 inline constexpr wchar_t kBrowserActivityPipeName[] = L"\\\\.\\pipe\\drpc-browser-activity";
 inline constexpr char kNativeMessagingHostName[] = "com.drpc.browser_host";
@@ -17,6 +19,12 @@ enum class BrowserPlaybackState {
     Idle,
     Playing,
     Paused,
+};
+
+enum class BrowserActivityDisposition {
+    Publish,
+    Sticky,
+    Clear,
 };
 
 struct BrowserActivitySnapshot {
@@ -28,10 +36,8 @@ struct BrowserActivitySnapshot {
     std::string pageTitle;
     std::string siteId;
     BrowserPlaybackState playbackState = BrowserPlaybackState::Idle;
-    std::string seriesTitle;
-    std::string episodeLabel;
-    std::optional<double> positionSeconds;
-    std::optional<double> durationSeconds;
+    BrowserActivityDisposition activityDisposition = BrowserActivityDisposition::Clear;
+    std::optional<ActivityPreset> activityCard;
     std::int64_t sentAtUnixMs = 0;
 
     std::string IdentityKey() const;
@@ -40,5 +46,6 @@ struct BrowserActivitySnapshot {
 bool ParseBrowserActivityMessage(std::string_view message, BrowserActivitySnapshot& snapshot, std::string& error);
 std::string SerializeBrowserActivityMessage(const BrowserActivitySnapshot& snapshot);
 std::string BrowserPlaybackStateToString(BrowserPlaybackState state);
+std::string BrowserActivityDispositionToString(BrowserActivityDisposition disposition);
 
 }  // namespace drpc

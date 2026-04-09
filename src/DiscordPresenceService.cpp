@@ -152,7 +152,10 @@ public:
 
         if (preset.showElapsedTime && preset.startedAtUnixSeconds.has_value()) {
             discordpp::ActivityTimestamps timestamps;
-            timestamps.SetStart(static_cast<std::time_t>(preset.startedAtUnixSeconds.value()));
+            timestamps.SetStart(static_cast<std::uint64_t>(preset.startedAtUnixSeconds.value()) * 1000ULL);
+            if (preset.endAtUnixSeconds.has_value()) {
+                timestamps.SetEnd(static_cast<std::uint64_t>(preset.endAtUnixSeconds.value()) * 1000ULL);
+            }
             activity.SetTimestamps(timestamps);
         }
 
@@ -253,6 +256,9 @@ void DiscordPresenceService::Resume() {
 
 void DiscordPresenceService::Clear() {
     backend_->Clear(logger_);
+    lastPublishedWasClear_ = true;
+    lastPublishedIdentity_ = "manual-clear";
+    presetStartedAt_.reset();
 }
 
 void DiscordPresenceService::PumpCallbacks() {
@@ -290,18 +296,32 @@ void DiscordPresenceService::PublishActivity(const SourceActivity& activity, boo
         return;
     }
 
-    if (force || !lastPublishedIdentity_.has_value() || lastPublishedIdentity_.value() != activity.identity) {
+    if (activity.disposition == SourceActivityDisposition::Clear || !activity.preset.has_value()) {
+        if (force || !lastPublishedWasClear_ || !lastPublishedIdentity_.has_value() || lastPublishedIdentity_.value() != activity.identity) {
+            backend_->Clear(logger_);
+        }
+        lastPublishedWasClear_ = true;
+        lastPublishedIdentity_ = activity.identity;
+        presetStartedAt_.reset();
+        return;
+    }
+
+    if (force || lastPublishedWasClear_ || !lastPublishedIdentity_.has_value() || lastPublishedIdentity_.value() != activity.identity) {
         presetStartedAt_ = std::chrono::system_clock::now();
     }
 
-    ActivityPreset snapshot = activity.preset;
-    if (snapshot.showElapsedTime && presetStartedAt_.has_value()) {
-        snapshot.startedAtUnixSeconds = std::chrono::system_clock::to_time_t(presetStartedAt_.value());
+    ActivityPreset snapshot = activity.preset.value();
+    if (snapshot.showElapsedTime) {
+        if (!snapshot.startedAtUnixSeconds.has_value() && presetStartedAt_.has_value()) {
+            snapshot.startedAtUnixSeconds = std::chrono::system_clock::to_time_t(presetStartedAt_.value());
+        }
     } else {
         snapshot.startedAtUnixSeconds.reset();
+        snapshot.endAtUnixSeconds.reset();
     }
 
     backend_->Publish(snapshot, logger_);
+    lastPublishedWasClear_ = false;
     lastPublishedIdentity_ = activity.identity;
 }
 

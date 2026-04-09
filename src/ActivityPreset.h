@@ -38,6 +38,7 @@ struct ActivityPreset {
     StatusDisplayType statusDisplayType = StatusDisplayType::Name;
     bool showElapsedTime = true;
     std::optional<std::int64_t> startedAtUnixSeconds;
+    std::optional<std::int64_t> endAtUnixSeconds;
 };
 
 }  // namespace drpc

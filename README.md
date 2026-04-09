@@ -17,9 +17,10 @@
 - Keeps the tray app as the only process that talks to Discord
 - Accepts normalized browser snapshots over `\\.\pipe\drpc-browser-activity`
 - Uses a dedicated native messaging host executable, `drpc_native_host.exe`
-- Supports rich site metadata for Crunchyroll and HIDIVE in the linked browser extension
-- Falls back to generic active-tab title and host when a site adapter is not available
-- Falls back to the configured idle preset when browser data is stale or paused
+- Uses bundled website definitions in the browser extension for page matching and card building
+- Supports scripted activity cards for Crunchyroll, HIDIVE, and 9anime
+- Keeps the last matched site activity sticky when the user switches to an unmatched page
+- Clears presence when no matched browser activity remains or cached browser data goes stale
 
 ## Requirements
 
@@ -59,12 +60,12 @@ Built targets:
 - `browserDetection.enabled`
 - `browserDetection.staleAfterMs`
 - `browserDetection.fallbackPreset`
-- `browserDetection.supportedSites[]`
+- `browserDetection.supportedSites[]` as an optional allowlist for bundled site-definition IDs
 
 Default browser mode uses:
 
-- `Watching Video` as the active visual template
-- `Idle` as the fallback preset when browser data is stale, paused, or missing
+- bundled site-defined activity cards for supported browser pages
+- no generic browser-card fallback when the active page is unmatched
 
 ## Run browser mode
 

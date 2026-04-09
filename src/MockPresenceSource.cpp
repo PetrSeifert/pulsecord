@@ -20,6 +20,7 @@ SourceActivity MockPresenceSource::Current() const {
         .preset = preset,
         .identity = "mock:" + std::to_string(currentIndex_),
         .label = ToWide(preset.name),
+        .disposition = SourceActivityDisposition::Publish,
     };
 }
 

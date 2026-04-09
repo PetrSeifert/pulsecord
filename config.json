@@ -8,7 +8,8 @@
     "fallbackPreset": "Idle",
     "supportedSites": [
       "crunchyroll",
-      "hidive"
+      "hidive",
+      "9anime"
     ]
   },
   "presets": [

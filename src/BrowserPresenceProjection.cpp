@@ -4,25 +4,22 @@
 
 #include <algorithm>
 #include <cctype>
+#include <utility>
 
 namespace drpc {
 namespace {
-
-inline constexpr std::string_view kNoActiveTabSiteId = "drpc-no-active-tab";
-inline constexpr std::string_view kInternalPageSiteId = "drpc-internal-page";
 
 std::string ToLower(std::string value) {
     std::transform(value.begin(), value.end(), value.begin(), [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
     return value;
 }
 
-bool IsHttpUrl(std::string_view url) {
-    return url.rfind("http://", 0) == 0 || url.rfind("https://", 0) == 0;
-}
-
 bool IsSupportedSite(const BrowserDetectionConfig& config, std::string_view siteId) {
-    if (siteId.empty() || config.supportedSites.empty()) {
-        return false;
+    if (siteId.empty()) {
+        return true;
+    }
+    if (config.supportedSites.empty()) {
+        return true;
     }
 
     const auto normalized = ToLower(std::string(siteId));
@@ -31,69 +28,47 @@ bool IsSupportedSite(const BrowserDetectionConfig& config, std::string_view site
     });
 }
 
-std::string SiteDisplayName(const BrowserActivitySnapshot& snapshot) {
-    const auto siteId = ToLower(snapshot.siteId);
-    if (siteId == "crunchyroll") {
-        return "Crunchyroll";
+std::wstring BuildLabel(const BrowserActivitySnapshot& snapshot) {
+    if (snapshot.activityCard.has_value()) {
+        if (!snapshot.activityCard->details.empty()) {
+            return ToWide(snapshot.activityCard->details);
+        }
+        if (!snapshot.activityCard->name.empty()) {
+            return ToWide(snapshot.activityCard->name);
+        }
+        if (!snapshot.activityCard->state.empty()) {
+            return ToWide(snapshot.activityCard->state);
+        }
     }
-    if (siteId == "hidive") {
-        return "HIDIVE";
+
+    if (!snapshot.pageTitle.empty()) {
+        return ToWide(snapshot.pageTitle);
     }
     if (!snapshot.siteId.empty()) {
-        return snapshot.siteId;
+        return ToWide(snapshot.siteId);
     }
     if (!snapshot.host.empty()) {
-        return snapshot.host;
-    }
-    return "browser";
-}
-
-std::string CleanPageTitle(const BrowserActivitySnapshot& snapshot) {
-    if (!snapshot.pageTitle.empty()) {
-        return snapshot.pageTitle;
-    }
-    if (!snapshot.seriesTitle.empty()) {
-        return snapshot.seriesTitle;
-    }
-    return "Watching in browser";
-}
-
-ActivityPreset PrepareTemplate(const ActivityPreset& source, bool showElapsedTime) {
-    ActivityPreset preset = source;
-    preset.showElapsedTime = showElapsedTime;
-    return preset;
-}
-
-bool IsNoActiveTabSnapshot(const BrowserActivitySnapshot& snapshot) {
-    return snapshot.siteId == kNoActiveTabSiteId;
-}
-
-bool IsInternalPageSnapshot(const BrowserActivitySnapshot& snapshot) {
-    return snapshot.siteId == kInternalPageSiteId || (!snapshot.url.empty() && !IsHttpUrl(snapshot.url));
-}
-
-BrowserPresenceProjection MakeFallbackProjection(const ActivityPreset& fallbackTemplate,
-                                                 std::string identity,
-                                                 std::wstring label,
-                                                 std::wstring sourceStatus,
-                                                 std::string detailsOverride = {},
-                                                 std::string stateOverride = {}) {
-    auto preset = PrepareTemplate(fallbackTemplate, false);
-    if (!detailsOverride.empty()) {
-        preset.details = std::move(detailsOverride);
-    }
-    if (!stateOverride.empty()) {
-        preset.state = std::move(stateOverride);
+        return ToWide(snapshot.host);
     }
 
+    return L"Browser activity";
+}
+
+BrowserPresenceProjection MakeProjection(SourceActivity activity, std::wstring sourceStatus) {
     return BrowserPresenceProjection{
-        .activity = SourceActivity{
-            .preset = std::move(preset),
-            .identity = std::move(identity),
-            .label = std::move(label),
-        },
+        .activity = std::move(activity),
         .sourceStatus = std::move(sourceStatus),
     };
+}
+
+BrowserPresenceProjection MakeClearProjection(std::string identity, std::wstring label, std::wstring sourceStatus) {
+    return MakeProjection(SourceActivity{
+                              .preset = std::nullopt,
+                              .identity = std::move(identity),
+                              .label = std::move(label),
+                              .disposition = SourceActivityDisposition::Clear,
+                          },
+                          std::move(sourceStatus));
 }
 
 }  // namespace
@@ -102,90 +77,33 @@ BrowserPresenceProjection ProjectBrowserPresence(const std::optional<BrowserActi
                                                 bool hasSeenBrowser,
                                                 bool isFresh,
                                                 const BrowserDetectionConfig& config,
-                                                const ActivityPreset& activeTemplate,
-                                                const ActivityPreset& fallbackTemplate) {
+                                                const ActivityPreset&,
+                                                const ActivityPreset&) {
     if (!snapshot.has_value()) {
-        return MakeFallbackProjection(
-            fallbackTemplate,
-            "browser:waiting",
-            L"Waiting for browser",
-            hasSeenBrowser ? L"Browser disconnected" : L"Waiting for browser");
+        const auto status = hasSeenBrowser ? L"Browser disconnected" : L"Waiting for browser";
+        return MakeClearProjection("browser:waiting", L"Waiting for browser", status);
     }
 
-    if (IsNoActiveTabSnapshot(snapshot.value())) {
-        return MakeFallbackProjection(
-            fallbackTemplate,
-            "browser:no-active-tab",
-            L"No active browser page",
-            L"No active browser page",
-            "No active browser page",
-            "No active browser tab");
-    }
-
-    if (IsInternalPageSnapshot(snapshot.value())) {
-        const auto title = CleanPageTitle(snapshot.value());
-        const auto label = ToWide(title);
-        return MakeFallbackProjection(
-            fallbackTemplate,
-            "browser:unsupported-page:" + snapshot->IdentityKey(),
-            label.empty() ? L"Unsupported browser page" : label,
-            L"Unsupported browser page",
-            title,
-            "Browser page not supported");
-    }
-
-    const auto supported = IsSupportedSite(config, snapshot->siteId);
-    const auto siteDisplayName = SiteDisplayName(snapshot.value());
-    const auto title = supported && !snapshot->seriesTitle.empty() ? snapshot->seriesTitle : CleanPageTitle(snapshot.value());
-    const auto label = ToWide(title);
-
+    const auto label = BuildLabel(snapshot.value());
     if (!isFresh) {
-        return MakeFallbackProjection(
-            fallbackTemplate,
-            "browser:stale:" + snapshot->IdentityKey(),
-            label.empty() ? L"Browser stale" : label,
-            L"Browser stale",
-            title,
-            "Browser data is stale");
+        return MakeClearProjection("browser:stale:" + snapshot->IdentityKey(), label, L"Browser stale");
     }
 
-    if (snapshot->playbackState == BrowserPlaybackState::Paused) {
-        return MakeFallbackProjection(
-            fallbackTemplate,
-            "browser:paused:" + snapshot->IdentityKey(),
-            label.empty() ? L"Paused in browser" : label,
-            L"Browser paused",
-            title,
-            "Paused on " + siteDisplayName);
+    if (!IsSupportedSite(config, snapshot->siteId)) {
+        return MakeClearProjection("browser:filtered:" + snapshot->IdentityKey(), label, L"Browser site filtered");
     }
 
-    if (snapshot->playbackState == BrowserPlaybackState::Idle) {
-        return MakeFallbackProjection(
-            fallbackTemplate,
-            "browser:idle:" + snapshot->IdentityKey(),
-            label.empty() ? L"Idle in browser" : label,
-            L"Browser idle",
-            title,
-            "Idle on " + siteDisplayName);
+    if (snapshot->activityDisposition == BrowserActivityDisposition::Clear || !snapshot->activityCard.has_value()) {
+        return MakeClearProjection("browser:clear:" + snapshot->IdentityKey(), label, L"No matched browser activity");
     }
 
-    auto preset = PrepareTemplate(activeTemplate, true);
-    preset.details = title;
-
-    if (supported && !snapshot->episodeLabel.empty()) {
-        preset.state = snapshot->episodeLabel + " on " + siteDisplayName;
-    } else {
-        preset.state = "Watching on " + siteDisplayName;
-    }
-
-    return BrowserPresenceProjection{
-        .activity = SourceActivity{
-            .preset = std::move(preset),
-            .identity = "browser:active:" + snapshot->IdentityKey(),
-            .label = label.empty() ? ToWide(siteDisplayName) : label,
-        },
-        .sourceStatus = supported ? L"Browser connected" : L"Browser connected (generic)",
-    };
+    return MakeProjection(SourceActivity{
+                              .preset = snapshot->activityCard,
+                              .identity = (snapshot->activityDisposition == BrowserActivityDisposition::Sticky ? "browser:sticky:" : "browser:active:") + snapshot->IdentityKey(),
+                              .label = label,
+                              .disposition = SourceActivityDisposition::Publish,
+                          },
+                          snapshot->activityDisposition == BrowserActivityDisposition::Sticky ? L"Browser connected (sticky)" : L"Browser connected");
 }
 
 }  // namespace drpc

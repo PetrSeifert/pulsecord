@@ -53,6 +53,7 @@ private:
     std::string applicationId_;
     bool initialized_ = false;
     bool paused_ = false;
+    bool lastPublishedWasClear_ = false;
     std::optional<std::string> lastPublishedIdentity_;
     std::optional<std::chrono::system_clock::time_point> presetStartedAt_;
 };
