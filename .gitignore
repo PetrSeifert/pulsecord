@@ -1,0 +1,9 @@
+build/
+out/
+.vs/
+*.user
+*.suo
+*.VC.db
+*.VC.opendb
+logs/
+vendor/discord_social_sdk/

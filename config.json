@@ -1,0 +1,64 @@
+{
+  "applicationId": "1491798009942507712",
+  "updateIntervalMs": 15000,
+  "presets": [
+    {
+      "name": "Coding",
+      "details": "Working on drpc",
+      "state": "Writing C++",
+      "statusDisplayType": "details",
+      "showElapsedTime": true,
+      "assets": {
+        "largeImage": "coding",
+        "largeText": "Coding",
+        "smallImage": "keyboard",
+        "smallText": "Focused"
+      },
+      "buttons": [
+        {
+          "label": "Source",
+          "url": "https://github.com/"
+        }
+      ]
+    },
+    {
+      "name": "Gaming",
+      "details": "Playing something fun",
+      "state": "In a session",
+      "statusDisplayType": "name",
+      "showElapsedTime": true,
+      "assets": {
+        "largeImage": "gaming",
+        "largeText": "Gaming",
+        "smallImage": "controller",
+        "smallText": "Relaxing"
+      }
+    },
+    {
+      "name": "Watching Video",
+      "details": "Watching a video",
+      "state": "Full screen",
+      "statusDisplayType": "state",
+      "showElapsedTime": true,
+      "assets": {
+        "largeImage": "video",
+        "largeText": "Watching",
+        "smallImage": "play",
+        "smallText": "Now playing"
+      }
+    },
+    {
+      "name": "Idle",
+      "details": "Away from keyboard",
+      "state": "Be right back",
+      "statusDisplayType": "name",
+      "showElapsedTime": false,
+      "assets": {
+        "largeImage": "idle",
+        "largeText": "Idle",
+        "smallImage": "moon",
+        "smallText": "AFK"
+      }
+    }
+  ]
+}
