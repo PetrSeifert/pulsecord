@@ -15,14 +15,8 @@ ActivityType ParseActivityType(std::string_view value, ActivityType fallback) {
     if (value == "streaming") {
         return ActivityType::Streaming;
     }
-    if (value == "customStatus") {
-        return ActivityType::CustomStatus;
-    }
     if (value == "competing") {
         return ActivityType::Competing;
-    }
-    if (value == "hangStatus") {
-        return ActivityType::HangStatus;
     }
 
     return fallback;
@@ -36,12 +30,8 @@ std::string_view ActivityTypeToString(ActivityType value) {
         return "listening";
     case ActivityType::Streaming:
         return "streaming";
-    case ActivityType::CustomStatus:
-        return "customStatus";
     case ActivityType::Competing:
         return "competing";
-    case ActivityType::HangStatus:
-        return "hangStatus";
     case ActivityType::Playing:
     default:
         return "playing";

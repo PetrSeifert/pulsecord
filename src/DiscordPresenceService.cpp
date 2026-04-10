@@ -23,6 +23,11 @@ std::optional<std::uint64_t> ParseApplicationId(const std::string& value) {
     }
 }
 
+bool HasAssets(const ActivityAssets& assets) {
+    return !assets.largeImage.empty() || !assets.largeText.empty() || !assets.largeUrl.empty() ||
+           !assets.smallImage.empty() || !assets.smallText.empty() || !assets.smallUrl.empty();
+}
+
 discordpp::ActivityTypes ToDiscordActivityType(ActivityType type) {
     switch (type) {
     case ActivityType::Streaming:
@@ -31,12 +36,8 @@ discordpp::ActivityTypes ToDiscordActivityType(ActivityType type) {
         return discordpp::ActivityTypes::Listening;
     case ActivityType::Watching:
         return discordpp::ActivityTypes::Watching;
-    case ActivityType::CustomStatus:
-        return discordpp::ActivityTypes::CustomStatus;
     case ActivityType::Competing:
         return discordpp::ActivityTypes::Competing;
-    case ActivityType::HangStatus:
-        return discordpp::ActivityTypes::HangStatus;
     case ActivityType::Playing:
     default:
         return discordpp::ActivityTypes::Playing;
@@ -114,8 +115,12 @@ public:
 
         discordpp::Activity activity;
         activity.SetType(ToDiscordActivityType(preset.type));
-        activity.SetDetails(preset.details);
-        activity.SetState(preset.state);
+        if (!preset.details.empty()) {
+            activity.SetDetails(preset.details);
+        }
+        if (!preset.state.empty()) {
+            activity.SetState(preset.state);
+        }
 
         if (!preset.detailsUrl.empty()) {
             activity.SetDetailsUrl(preset.detailsUrl);
@@ -124,26 +129,28 @@ public:
             activity.SetStateUrl(preset.stateUrl);
         }
 
-        discordpp::ActivityAssets assets;
-        if (!preset.assets.largeImage.empty()) {
-            assets.SetLargeImage(preset.assets.largeImage);
+        if (HasAssets(preset.assets)) {
+            discordpp::ActivityAssets assets;
+            if (!preset.assets.largeImage.empty()) {
+                assets.SetLargeImage(preset.assets.largeImage);
+            }
+            if (!preset.assets.largeText.empty()) {
+                assets.SetLargeText(preset.assets.largeText);
+            }
+            if (!preset.assets.largeUrl.empty()) {
+                assets.SetLargeUrl(preset.assets.largeUrl);
+            }
+            if (!preset.assets.smallImage.empty()) {
+                assets.SetSmallImage(preset.assets.smallImage);
+            }
+            if (!preset.assets.smallText.empty()) {
+                assets.SetSmallText(preset.assets.smallText);
+            }
+            if (!preset.assets.smallUrl.empty()) {
+                assets.SetSmallUrl(preset.assets.smallUrl);
+            }
+            activity.SetAssets(assets);
         }
-        if (!preset.assets.largeText.empty()) {
-            assets.SetLargeText(preset.assets.largeText);
-        }
-        if (!preset.assets.largeUrl.empty()) {
-            assets.SetLargeUrl(preset.assets.largeUrl);
-        }
-        if (!preset.assets.smallImage.empty()) {
-            assets.SetSmallImage(preset.assets.smallImage);
-        }
-        if (!preset.assets.smallText.empty()) {
-            assets.SetSmallText(preset.assets.smallText);
-        }
-        if (!preset.assets.smallUrl.empty()) {
-            assets.SetSmallUrl(preset.assets.smallUrl);
-        }
-        activity.SetAssets(assets);
 
         switch (preset.statusDisplayType) {
         case StatusDisplayType::State:
@@ -178,7 +185,19 @@ public:
             if (result.Successful()) {
                 logger.Info("Published Discord Rich Presence preset: " + presetName);
             } else {
-                logger.Error("Discord Rich Presence update failed for preset: " + presetName);
+                std::ostringstream line;
+                line << "Discord Rich Presence update failed for preset: " << presetName;
+                const auto error = result.Error();
+                if (!error.empty()) {
+                    line << " error=\"" << error << '"';
+                }
+                if (result.ErrorCode() != 0) {
+                    line << " errorCode=" << result.ErrorCode();
+                }
+                if (result.Retryable()) {
+                    line << " retryable=true";
+                }
+                logger.Error(line.str());
             }
         });
     }

@@ -1,7 +1,6 @@
 #include "BrowserActivityProtocol.h"
 #include "BrowserPresenceProjection.h"
 #include "Config.h"
-
 #include <cstdlib>
 #include <iostream>
 #include <optional>
@@ -69,9 +68,7 @@ void TestActivityTypeHelpers() {
     Expect(drpc::ParseActivityType("watching") == drpc::ActivityType::Watching, "watching should parse");
     Expect(drpc::ParseActivityType("listening") == drpc::ActivityType::Listening, "listening should parse");
     Expect(drpc::ParseActivityType("streaming") == drpc::ActivityType::Streaming, "streaming should parse");
-    Expect(drpc::ParseActivityType("customStatus") == drpc::ActivityType::CustomStatus, "customStatus should parse");
     Expect(drpc::ParseActivityType("competing") == drpc::ActivityType::Competing, "competing should parse");
-    Expect(drpc::ParseActivityType("hangStatus") == drpc::ActivityType::HangStatus, "hangStatus should parse");
     Expect(drpc::ParseActivityType("unknown", drpc::ActivityType::Watching) == drpc::ActivityType::Watching, "unknown should use fallback");
     Expect(drpc::ActivityTypeToString(drpc::ActivityType::Playing) == "playing", "playing should stringify");
     Expect(drpc::ActivityTypeToString(drpc::ActivityType::Watching) == "watching", "watching should stringify");

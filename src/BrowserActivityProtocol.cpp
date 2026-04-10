@@ -62,7 +62,7 @@ bool ParseActivityCard(const json& item, ActivityPreset& preset, std::string& er
     preset.detailsUrl = Trim(item.value("detailsUrl", ""));
     preset.state = Trim(item.value("state", ""));
     preset.stateUrl = Trim(item.value("stateUrl", ""));
-    preset.type = ParseActivityType(item.value("type", "playing"));
+    preset.type = ParseActivityType(item.value("type", "playing"), ActivityType::Playing);
     preset.statusDisplayType = ParseStatusDisplayType(item.value("statusDisplayType", "name"));
     preset.showElapsedTime = item.value("showElapsedTime", true);
 

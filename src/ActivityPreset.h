@@ -13,9 +13,7 @@ enum class ActivityType {
     Watching,
     Listening,
     Streaming,
-    CustomStatus,
     Competing,
-    HangStatus,
 };
 
 enum class StatusDisplayType {
