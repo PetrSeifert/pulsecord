@@ -16,7 +16,7 @@ namespace drpc {
 
 class BrowserActivitySource final : public PresenceSource {
 public:
-    BrowserActivitySource(const AppConfig& config, Logger& logger, std::function<void()> onActivityUpdated = {});
+    BrowserActivitySource(const AppConfig& config, Logger& logger, std::function<void(bool)> onActivityUpdated = {});
     ~BrowserActivitySource() override;
 
     SourceActivity Current() const override;
@@ -35,7 +35,7 @@ private:
 
     BrowserDetectionConfig config_;
     Logger& logger_;
-    std::function<void()> onActivityUpdated_;
+    std::function<void(bool)> onActivityUpdated_;
     ActivityPreset activeTemplate_;
     ActivityPreset fallbackTemplate_;
     mutable std::mutex mutex_;

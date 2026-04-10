@@ -51,7 +51,7 @@ std::string TrimMessage(std::string value) {
 
 }  // namespace
 
-BrowserActivitySource::BrowserActivitySource(const AppConfig& config, Logger& logger, std::function<void()> onActivityUpdated)
+BrowserActivitySource::BrowserActivitySource(const AppConfig& config, Logger& logger, std::function<void(bool)> onActivityUpdated)
     : config_(config.browserDetection),
       logger_(logger),
       onActivityUpdated_(std::move(onActivityUpdated)),
@@ -186,16 +186,21 @@ void BrowserActivitySource::ProcessMessage(std::string message) {
     }
 
     logger_.Info("Accepted browser activity update from " + snapshot.browser + " for host " + snapshot.host + ".");
+    const auto incomingIdentity = snapshot.IdentityKey();
+    bool shouldForcePublish = true;
 
     {
         std::scoped_lock lock(mutex_);
+        if (latestSnapshot_.has_value()) {
+            shouldForcePublish = latestSnapshot_->IdentityKey() != incomingIdentity;
+        }
         latestSnapshot_ = std::move(snapshot);
         lastReceivedAt_ = std::chrono::steady_clock::now();
         hasSeenBrowser_ = true;
     }
 
     if (onActivityUpdated_) {
-        onActivityUpdated_();
+        onActivityUpdated_(shouldForcePublish);
     }
 }
 

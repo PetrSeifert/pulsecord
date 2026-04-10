@@ -314,6 +314,10 @@ void DiscordPresenceService::PublishActivity(const SourceActivity& activity, boo
         return;
     }
 
+    if (!force && !lastPublishedWasClear_ && lastPublishedIdentity_.has_value() && lastPublishedIdentity_.value() == activity.identity) {
+        return;
+    }
+
     if (force || lastPublishedWasClear_ || !lastPublishedIdentity_.has_value() || lastPublishedIdentity_.value() != activity.identity) {
         presetStartedAt_ = std::chrono::system_clock::now();
     }

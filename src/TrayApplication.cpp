@@ -76,9 +76,9 @@ bool TrayApplication::Initialize() {
 
     logger_->Info("Creating activity source.");
     if (config_.activityMode == ActivityMode::Browser) {
-        source_ = std::make_unique<BrowserActivitySource>(config_, *logger_, [this]() {
+        source_ = std::make_unique<BrowserActivitySource>(config_, *logger_, [this](bool forcePublish) {
             if (windowHandle_) {
-                PostMessageW(windowHandle_, kWindowMessageSourceUpdated, 0, 0);
+                PostMessageW(windowHandle_, kWindowMessageSourceUpdated, forcePublish ? 1 : 0, 0);
             }
         });
     } else {
@@ -286,7 +286,7 @@ LRESULT TrayApplication::HandleMessage(UINT message, WPARAM wParam, LPARAM lPara
         OnTimer(static_cast<UINT_PTR>(wParam));
         return 0;
     case kWindowMessageSourceUpdated:
-        PublishCurrentActivity(true);
+        PublishCurrentActivity(wParam != 0);
         return 0;
     case WM_DESTROY:
         PostQuitMessage(0);
