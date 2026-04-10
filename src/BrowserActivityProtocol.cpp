@@ -34,46 +34,6 @@ bool ReadOptionalInteger(const json& root, const char* key, std::optional<std::i
     return true;
 }
 
-ActivityType ParseActivityType(const std::string& value) {
-    if (value == "watching") {
-        return ActivityType::Watching;
-    }
-
-    return ActivityType::Playing;
-}
-
-std::string ActivityTypeToString(ActivityType value) {
-    switch (value) {
-    case ActivityType::Watching:
-        return "watching";
-    case ActivityType::Playing:
-    default:
-        return "playing";
-    }
-}
-
-StatusDisplayType ParseStatusDisplayType(const std::string& value) {
-    if (value == "state") {
-        return StatusDisplayType::State;
-    }
-    if (value == "details") {
-        return StatusDisplayType::Details;
-    }
-    return StatusDisplayType::Name;
-}
-
-std::string StatusDisplayTypeToString(StatusDisplayType value) {
-    switch (value) {
-    case StatusDisplayType::State:
-        return "state";
-    case StatusDisplayType::Details:
-        return "details";
-    case StatusDisplayType::Name:
-    default:
-        return "name";
-    }
-}
-
 bool ParseActivityButton(const json& item, ActivityButton& button, std::string& error) {
     if (!item.is_object()) {
         error = "activityCard.buttons entries must be objects.";
@@ -102,7 +62,7 @@ bool ParseActivityCard(const json& item, ActivityPreset& preset, std::string& er
     preset.detailsUrl = Trim(item.value("detailsUrl", ""));
     preset.state = Trim(item.value("state", ""));
     preset.stateUrl = Trim(item.value("stateUrl", ""));
-    preset.type = ParseActivityType(item.value("type", "watching"));
+    preset.type = ParseActivityType(item.value("type", "playing"));
     preset.statusDisplayType = ParseStatusDisplayType(item.value("statusDisplayType", "name"));
     preset.showElapsedTime = item.value("showElapsedTime", true);
 
@@ -153,8 +113,8 @@ json SerializeActivityCard(const ActivityPreset& preset) {
     card["detailsUrl"] = preset.detailsUrl;
     card["state"] = preset.state;
     card["stateUrl"] = preset.stateUrl;
-    card["type"] = ActivityTypeToString(preset.type);
-    card["statusDisplayType"] = StatusDisplayTypeToString(preset.statusDisplayType);
+    card["type"] = std::string(ActivityTypeToString(preset.type));
+    card["statusDisplayType"] = std::string(StatusDisplayTypeToString(preset.statusDisplayType));
     card["showElapsedTime"] = preset.showElapsedTime;
     card["startedAtUnixSeconds"] = preset.startedAtUnixSeconds.has_value() ? json(preset.startedAtUnixSeconds.value()) : json(nullptr);
     card["endAtUnixSeconds"] = preset.endAtUnixSeconds.has_value() ? json(preset.endAtUnixSeconds.value()) : json(nullptr);
@@ -215,12 +175,7 @@ std::string BrowserActivitySnapshot::IdentityKey() const {
         << BrowserActivityDispositionToString(activityDisposition);
 
     if (activityCard.has_value()) {
-        key << '|'
-            << activityCard->name << '|'
-            << activityCard->details << '|'
-            << activityCard->state << '|'
-            << (activityCard->startedAtUnixSeconds.has_value() ? std::to_string(activityCard->startedAtUnixSeconds.value()) : "") << '|'
-            << (activityCard->endAtUnixSeconds.has_value() ? std::to_string(activityCard->endAtUnixSeconds.value()) : "");
+        key << '|' << SerializeActivityCard(activityCard.value()).dump();
     }
 
     return key.str();

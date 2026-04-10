@@ -23,22 +23,20 @@ std::optional<std::uint64_t> ParseApplicationId(const std::string& value) {
     }
 }
 
-std::string StatusDisplayTypeToString(StatusDisplayType type) {
-    switch (type) {
-    case StatusDisplayType::State:
-        return "state";
-    case StatusDisplayType::Details:
-        return "details";
-    case StatusDisplayType::Name:
-    default:
-        return "name";
-    }
-}
-
 discordpp::ActivityTypes ToDiscordActivityType(ActivityType type) {
     switch (type) {
+    case ActivityType::Streaming:
+        return discordpp::ActivityTypes::Streaming;
+    case ActivityType::Listening:
+        return discordpp::ActivityTypes::Listening;
     case ActivityType::Watching:
         return discordpp::ActivityTypes::Watching;
+    case ActivityType::CustomStatus:
+        return discordpp::ActivityTypes::CustomStatus;
+    case ActivityType::Competing:
+        return discordpp::ActivityTypes::Competing;
+    case ActivityType::HangStatus:
+        return discordpp::ActivityTypes::HangStatus;
     case ActivityType::Playing:
     default:
         return discordpp::ActivityTypes::Playing;

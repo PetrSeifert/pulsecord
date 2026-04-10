@@ -31,46 +31,6 @@ std::string ToConfigString(ActivityMode value) {
     }
 }
 
-ActivityType ParseActivityType(const std::string& value) {
-    if (value == "watching") {
-        return ActivityType::Watching;
-    }
-
-    return ActivityType::Playing;
-}
-
-std::string ToConfigString(ActivityType value) {
-    switch (value) {
-    case ActivityType::Watching:
-        return "watching";
-    case ActivityType::Playing:
-    default:
-        return "playing";
-    }
-}
-
-StatusDisplayType ParseStatusDisplayType(const std::string& value) {
-    if (value == "state") {
-        return StatusDisplayType::State;
-    }
-    if (value == "details") {
-        return StatusDisplayType::Details;
-    }
-    return StatusDisplayType::Name;
-}
-
-std::string ToConfigString(StatusDisplayType value) {
-    switch (value) {
-    case StatusDisplayType::State:
-        return "state";
-    case StatusDisplayType::Details:
-        return "details";
-    case StatusDisplayType::Name:
-    default:
-        return "name";
-    }
-}
-
 ActivityPreset ParsePreset(const json& item) {
     ActivityPreset preset;
     preset.name = item.value("name", "Unnamed");
@@ -113,8 +73,8 @@ json SerializePreset(const ActivityPreset& preset) {
     item["detailsUrl"] = preset.detailsUrl;
     item["state"] = preset.state;
     item["stateUrl"] = preset.stateUrl;
-    item["type"] = ToConfigString(preset.type);
-    item["statusDisplayType"] = ToConfigString(preset.statusDisplayType);
+    item["type"] = std::string(ActivityTypeToString(preset.type));
+    item["statusDisplayType"] = std::string(StatusDisplayTypeToString(preset.statusDisplayType));
     item["showElapsedTime"] = preset.showElapsedTime;
     item["assets"] = {
         {"largeImage", preset.assets.largeImage},

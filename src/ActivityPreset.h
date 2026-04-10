@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace drpc {
@@ -10,6 +11,11 @@ namespace drpc {
 enum class ActivityType {
     Playing,
     Watching,
+    Listening,
+    Streaming,
+    CustomStatus,
+    Competing,
+    HangStatus,
 };
 
 enum class StatusDisplayType {
@@ -46,5 +52,11 @@ struct ActivityPreset {
     std::optional<std::int64_t> startedAtUnixSeconds;
     std::optional<std::int64_t> endAtUnixSeconds;
 };
+
+ActivityType ParseActivityType(std::string_view value, ActivityType fallback = ActivityType::Playing);
+std::string_view ActivityTypeToString(ActivityType value);
+
+StatusDisplayType ParseStatusDisplayType(std::string_view value, StatusDisplayType fallback = StatusDisplayType::Name);
+std::string_view StatusDisplayTypeToString(StatusDisplayType value);
 
 }  // namespace drpc

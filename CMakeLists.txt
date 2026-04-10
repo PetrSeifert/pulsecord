@@ -35,6 +35,7 @@ find_file(DRPC_SDK_DLL
     NO_DEFAULT_PATH)
 
 set(DRPC_CORE_SOURCES
+    src/ActivityPreset.cpp
     src/ActivityPreset.h
     src/BrowserActivityProtocol.cpp
     src/BrowserActivityProtocol.h

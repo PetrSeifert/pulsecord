@@ -64,6 +64,20 @@ void TestParseValidMessage() {
     Expect(snapshot.activityCard->assets.largeImage == "https://cdn.example.com/poster.jpg", "activityCard largeImage should parse");
 }
 
+void TestActivityTypeHelpers() {
+    Expect(drpc::ParseActivityType("playing") == drpc::ActivityType::Playing, "playing should parse");
+    Expect(drpc::ParseActivityType("watching") == drpc::ActivityType::Watching, "watching should parse");
+    Expect(drpc::ParseActivityType("listening") == drpc::ActivityType::Listening, "listening should parse");
+    Expect(drpc::ParseActivityType("streaming") == drpc::ActivityType::Streaming, "streaming should parse");
+    Expect(drpc::ParseActivityType("customStatus") == drpc::ActivityType::CustomStatus, "customStatus should parse");
+    Expect(drpc::ParseActivityType("competing") == drpc::ActivityType::Competing, "competing should parse");
+    Expect(drpc::ParseActivityType("hangStatus") == drpc::ActivityType::HangStatus, "hangStatus should parse");
+    Expect(drpc::ParseActivityType("unknown", drpc::ActivityType::Watching) == drpc::ActivityType::Watching, "unknown should use fallback");
+    Expect(drpc::ActivityTypeToString(drpc::ActivityType::Playing) == "playing", "playing should stringify");
+    Expect(drpc::ActivityTypeToString(drpc::ActivityType::Watching) == "watching", "watching should stringify");
+    Expect(drpc::ActivityTypeToString(drpc::ActivityType::Listening) == "listening", "listening should stringify");
+}
+
 void TestRejectInvalidSchemaVersion() {
     const std::string payload = R"({
         "schemaVersion": 1,
@@ -239,12 +253,51 @@ void TestParseBrowserActivityDefaultsToWatchingType() {
     Expect(snapshot.activityCard->type == drpc::ActivityType::Watching, "browser activityCard should default to watching");
 }
 
+void TestIdentityKeyTracksActivityCardMetadata() {
+    drpc::BrowserActivitySnapshot base;
+    base.browser = "chrome";
+    base.url = "https://example.com/watch";
+    base.host = "example.com";
+    base.pageTitle = "Example";
+    base.siteId = "example";
+    base.playbackState = drpc::BrowserPlaybackState::Playing;
+    base.activityDisposition = drpc::BrowserActivityDisposition::Publish;
+    base.activityCard = drpc::ActivityPreset{
+        .name = "Watching Example",
+        .details = "Watching Example",
+        .detailsUrl = "https://example.com/watch",
+        .state = "Episode 1",
+        .stateUrl = "https://example.com/episodes/1",
+        .assets = drpc::ActivityAssets{"poster", "Poster", "https://example.com/poster", "play", "Playing", "https://example.com/status"},
+        .buttons = {drpc::ActivityButton{"Watch", "https://example.com/watch"}},
+        .type = drpc::ActivityType::Watching,
+        .statusDisplayType = drpc::StatusDisplayType::Details,
+        .showElapsedTime = true,
+        .startedAtUnixSeconds = 1710000000,
+        .endAtUnixSeconds = 1710001200,
+    };
+
+    auto updatedType = base;
+    updatedType.activityCard->type = drpc::ActivityType::Listening;
+    Expect(base.IdentityKey() != updatedType.IdentityKey(), "identity key should change when activity type changes");
+
+    auto updatedButton = base;
+    updatedButton.activityCard->buttons[0].url = "https://example.com/trailer";
+    Expect(base.IdentityKey() != updatedButton.IdentityKey(), "identity key should change when activity buttons change");
+
+    auto updatedAssets = base;
+    updatedAssets.activityCard->assets.smallText = "Paused";
+    Expect(base.IdentityKey() != updatedAssets.IdentityKey(), "identity key should change when activity assets change");
+}
+
 }  // namespace
 
 int main() {
+    TestActivityTypeHelpers();
     TestParseValidMessage();
     TestRejectInvalidSchemaVersion();
     TestParseBrowserActivityDefaultsToWatchingType();
+    TestIdentityKeyTracksActivityCardMetadata();
     TestProjectPublishedCard();
     TestProjectStickyCard();
     TestProjectClearDisposition();
