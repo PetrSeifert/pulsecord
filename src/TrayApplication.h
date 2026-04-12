@@ -31,6 +31,7 @@ private:
     static constexpr UINT kMenuPauseResume = 3003;
     static constexpr UINT kMenuOpenLogs = 3004;
     static constexpr UINT kMenuQuit = 3005;
+    static constexpr UINT kMenuReconnectDiscord = 3006;
 
     bool Initialize();
     void Shutdown();
@@ -54,6 +55,7 @@ private:
     std::filesystem::path executableDirectory_;
     std::filesystem::path configPath_;
     std::filesystem::path workspaceConfigPath_;
+    std::filesystem::path authStoragePath_;
     std::filesystem::path logPath_;
     AppConfig config_;
     std::unique_ptr<Logger> logger_;

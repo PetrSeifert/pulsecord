@@ -132,6 +132,18 @@ AppConfig ConfigLoader::LoadOrCreate(const std::filesystem::path& path) {
         }
     }
 
+    if (root.contains("discordAuth") && root["discordAuth"].is_object()) {
+        const auto& discordAuth = root["discordAuth"];
+        config.discordAuth.enabled = discordAuth.value("enabled", true);
+        config.discordAuth.useDeviceAuth = discordAuth.value("useDeviceAuth", false);
+        config.discordAuth.autoAuthenticate = discordAuth.value("autoAuthenticate", true);
+        config.discordAuth.autoRefresh = discordAuth.value("autoRefresh", true);
+        config.discordAuth.refreshLeewaySeconds = discordAuth.value("refreshLeewaySeconds", 86400U);
+        config.discordAuth.redirectUri = discordAuth.value("redirectUri", "http://127.0.0.1/callback");
+        config.discordAuth.scopes = discordAuth.value("scopes", "");
+        config.discordAuth.tokenStoragePath = discordAuth.value("tokenStoragePath", "discord-auth.json");
+    }
+
     if (root.contains("presets") && root["presets"].is_array()) {
         for (const auto& item : root["presets"]) {
             config.presets.push_back(ParsePreset(item));
@@ -152,6 +164,7 @@ AppConfig ConfigLoader::MakeDefault() {
     config.updateIntervalMs = 15000;
     config.activityMode = ActivityMode::Browser;
     config.browserDetection = BrowserDetectionConfig{};
+    config.discordAuth = DiscordAuthConfig{};
 
     config.presets = {
         ActivityPreset{
@@ -220,6 +233,16 @@ void ConfigLoader::WriteDefault(const std::filesystem::path& path) {
         {"staleAfterMs", config.browserDetection.staleAfterMs},
         {"fallbackPreset", config.browserDetection.fallbackPreset},
         {"supportedSites", config.browserDetection.supportedSites},
+    };
+    root["discordAuth"] = {
+        {"enabled", config.discordAuth.enabled},
+        {"useDeviceAuth", config.discordAuth.useDeviceAuth},
+        {"autoAuthenticate", config.discordAuth.autoAuthenticate},
+        {"autoRefresh", config.discordAuth.autoRefresh},
+        {"refreshLeewaySeconds", config.discordAuth.refreshLeewaySeconds},
+        {"redirectUri", config.discordAuth.redirectUri},
+        {"scopes", config.discordAuth.scopes},
+        {"tokenStoragePath", config.discordAuth.tokenStoragePath},
     };
     root["presets"] = json::array();
 

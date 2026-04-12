@@ -67,6 +67,13 @@ bool TrayApplication::Initialize() {
             logger_->Info("Using workspace config.json because the executable-local config still has the placeholder application ID.");
         }
     }
+    authStoragePath_ = config_.discordAuth.tokenStoragePath.empty()
+        ? (executableDirectory_ / "discord-auth.json")
+        : std::filesystem::path(config_.discordAuth.tokenStoragePath);
+    if (authStoragePath_.is_relative()) {
+        authStoragePath_ = executableDirectory_ / authStoragePath_;
+    }
+    logger_->Info("Using Discord auth token store at " + authStoragePath_.string() + ".");
     logger_->Info("Registering tray window class.");
     RegisterWindowClass();
     if (!CreateMessageWindow()) {
@@ -89,7 +96,8 @@ bool TrayApplication::Initialize() {
         CreateDiscordPresenceBackend(),
         *source_,
         *logger_,
-        config_.applicationId);
+        config_,
+        authStoragePath_);
 
     logger_->Info("Adding tray icon.");
     AddTrayIcon();
@@ -184,6 +192,12 @@ void TrayApplication::ShowContextMenu(POINT cursorPosition) {
     AppendMenuW(menu, navigationFlags, kMenuPreviousPreset, L"Previous preset");
     AppendMenuW(menu, navigationFlags, kMenuNextPreset, L"Next preset");
     AppendMenuW(menu, MF_STRING, kMenuPauseResume, presenceService_->IsPaused() ? L"Resume updates" : L"Pause updates");
+    if (config_.discordAuth.enabled) {
+        AppendMenuW(menu,
+                    MF_STRING,
+                    kMenuReconnectDiscord,
+                    presenceService_->IsAuthenticated() ? L"Reconnect Discord" : L"Connect Discord");
+    }
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(menu, MF_STRING, kMenuOpenLogs, L"Open logs");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
@@ -224,6 +238,13 @@ void TrayApplication::HandleCommand(WORD commandId) {
         break;
     case kMenuOpenLogs:
         OpenLogs();
+        break;
+    case kMenuReconnectDiscord:
+        if (presenceService_->IsAuthenticated()) {
+            presenceService_->ResetAuthentication();
+        } else {
+            presenceService_->Authenticate();
+        }
         break;
     case kMenuQuit:
         DestroyWindow(windowHandle_);

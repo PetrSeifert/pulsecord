@@ -27,7 +27,7 @@
 - Windows 10 or Windows 11
 - CMake 3.24+
 - Visual Studio 2022 with Desktop development for C++
-- Discord desktop client running for Rich Presence testing
+- Discord desktop client optional for OAuth overlay testing
 - A Chromium-based browser for browser mode
 
 ## Clone
@@ -61,6 +61,9 @@ Built targets:
 - `browserDetection.staleAfterMs`
 - `browserDetection.fallbackPreset`
 - `browserDetection.supportedSites[]` as an optional allowlist for bundled site-definition IDs
+- `discordAuth.enabled` to use account-authenticated Social SDK sessions
+- `discordAuth.redirectUri` for the OAuth callback configured in the Discord developer portal
+- `discordAuth.tokenStoragePath` for persisted access and refresh tokens
 
 Default browser mode uses:
 
@@ -92,6 +95,15 @@ after editing it.
 ```
 
 6. Start playback in the active browser tab.
+
+## Discord authentication
+
+The tray app now defaults to the Discord Social SDK account authentication flow. For public-client
+setups, enable `Public Client` in your application's OAuth2 settings and add
+`http://127.0.0.1/callback` as a redirect URL in the Discord developer portal. The app stores
+access and refresh tokens in the path configured by `discordAuth.tokenStoragePath`, protects them
+with Windows DPAPI, refreshes them when needed, and falls back to a browser-based sign-in if the
+Discord desktop client is not running.
 
 ## Discord Social SDK
 

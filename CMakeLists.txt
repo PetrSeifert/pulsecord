@@ -56,6 +56,7 @@ set(DRPC_CORE_SOURCES
 add_library(drpc_core STATIC ${DRPC_CORE_SOURCES})
 
 target_compile_definitions(drpc_core PUBLIC NOMINMAX UNICODE _UNICODE WIN32_LEAN_AND_MEAN)
+target_link_libraries(drpc_core PUBLIC crypt32)
 
 target_include_directories(drpc_core PUBLIC
     "${CMAKE_SOURCE_DIR}/src"

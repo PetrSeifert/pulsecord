@@ -20,11 +20,23 @@ struct BrowserDetectionConfig {
     std::vector<std::string> supportedSites = {"crunchyroll", "hidive", "netflix", "9anime"};
 };
 
+struct DiscordAuthConfig {
+    bool enabled = true;
+    bool useDeviceAuth = false;
+    bool autoAuthenticate = true;
+    bool autoRefresh = true;
+    unsigned int refreshLeewaySeconds = 86400;
+    std::string redirectUri = "http://127.0.0.1/callback";
+    std::string scopes;
+    std::string tokenStoragePath = "discord-auth.json";
+};
+
 struct AppConfig {
     std::string applicationId;
     unsigned int updateIntervalMs = 15000;
     ActivityMode activityMode = ActivityMode::Browser;
     BrowserDetectionConfig browserDetection;
+    DiscordAuthConfig discordAuth;
     std::vector<ActivityPreset> presets;
 };
 

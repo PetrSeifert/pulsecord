@@ -13,6 +13,16 @@
       "9anime"
     ]
   },
+  "discordAuth": {
+    "enabled": true,
+    "useDeviceAuth": false,
+    "autoAuthenticate": true,
+    "autoRefresh": true,
+    "refreshLeewaySeconds": 86400,
+    "redirectUri": "http://127.0.0.1/callback",
+    "scopes": "",
+    "tokenStoragePath": "discord-auth.json"
+  },
   "presets": [
     {
       "name": "Coding",
