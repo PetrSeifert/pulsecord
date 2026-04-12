@@ -1,5 +1,6 @@
 #include "DiscordPresenceService.h"
 
+#include <algorithm>
 #include <ctime>
 #include <sstream>
 
@@ -351,6 +352,7 @@ void DiscordPresenceService::PublishActivity(const SourceActivity& activity, boo
         snapshot.endAtUnixSeconds.reset();
     }
 
+    snapshot = SanitizeDiscordActivityPreset(snapshot);
     backend_->Publish(snapshot, logger_);
     lastPublishedWasClear_ = false;
     lastPublishedIdentity_ = activity.identity;

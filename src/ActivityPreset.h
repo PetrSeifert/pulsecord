@@ -51,6 +51,11 @@ struct ActivityPreset {
     std::optional<std::int64_t> endAtUnixSeconds;
 };
 
+constexpr std::size_t kDiscordUrlMaxLength = 256;
+
+bool IsDiscordUrlLengthValid(std::string_view value);
+ActivityPreset SanitizeDiscordActivityPreset(const ActivityPreset& preset);
+
 ActivityType ParseActivityType(std::string_view value, ActivityType fallback = ActivityType::Playing);
 std::string_view ActivityTypeToString(ActivityType value);
 

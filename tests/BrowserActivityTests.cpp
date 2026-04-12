@@ -287,6 +287,34 @@ void TestIdentityKeyTracksActivityCardMetadata() {
     Expect(base.IdentityKey() != updatedAssets.IdentityKey(), "identity key should change when activity assets change");
 }
 
+void TestSanitizeDiscordActivityPresetDropsOverlongUrls() {
+    const std::string tooLongUrl = "https://www.netflix.com/watch/" + std::string(300, 'x');
+
+    drpc::ActivityPreset preset{
+        .name = "DEATH NOTE",
+        .details = "Watching DEATH NOTE",
+        .detailsUrl = tooLongUrl,
+        .state = "Episode 1",
+        .stateUrl = tooLongUrl,
+        .assets = drpc::ActivityAssets{"poster", "Poster", tooLongUrl, "play", "Playing", tooLongUrl},
+        .buttons = {
+            drpc::ActivityButton{"Open", "https://www.netflix.com/title/70204970"},
+            drpc::ActivityButton{"Watch", tooLongUrl},
+        },
+        .type = drpc::ActivityType::Watching,
+        .statusDisplayType = drpc::StatusDisplayType::Details,
+        .showElapsedTime = true,
+    };
+
+    const auto sanitized = drpc::SanitizeDiscordActivityPreset(preset);
+    Expect(sanitized.detailsUrl.empty(), "detailsUrl should be cleared when overlong");
+    Expect(sanitized.stateUrl.empty(), "stateUrl should be cleared when overlong");
+    Expect(sanitized.assets.largeUrl.empty(), "largeUrl should be cleared when overlong");
+    Expect(sanitized.assets.smallUrl.empty(), "smallUrl should be cleared when overlong");
+    Expect(sanitized.buttons.size() == 1, "buttons with overlong URLs should be dropped");
+    Expect(sanitized.buttons[0].url == "https://www.netflix.com/title/70204970", "valid button URL should remain");
+}
+
 }  // namespace
 
 int main() {
@@ -295,6 +323,7 @@ int main() {
     TestRejectInvalidSchemaVersion();
     TestParseBrowserActivityDefaultsToWatchingType();
     TestIdentityKeyTracksActivityCardMetadata();
+    TestSanitizeDiscordActivityPresetDropsOverlongUrls();
     TestProjectPublishedCard();
     TestProjectStickyCard();
     TestProjectClearDisposition();

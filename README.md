@@ -18,7 +18,7 @@
 - Accepts normalized browser snapshots over `\\.\pipe\drpc-browser-activity`
 - Uses a dedicated native messaging host executable, `drpc_native_host.exe`
 - Uses bundled website definitions in the browser extension for page matching and card building
-- Supports scripted activity cards for Crunchyroll, HIDIVE, and 9anime
+- Supports scripted activity cards for Crunchyroll, HIDIVE, Netflix, and 9anime
 - Keeps the last matched site activity sticky when the user switches to an unmatched page
 - Clears presence when no matched browser activity remains or cached browser data goes stale
 

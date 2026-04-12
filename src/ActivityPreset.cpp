@@ -2,6 +2,36 @@
 
 namespace drpc {
 
+bool IsDiscordUrlLengthValid(std::string_view value) {
+    return value.empty() || value.size() <= kDiscordUrlMaxLength;
+}
+
+ActivityPreset SanitizeDiscordActivityPreset(const ActivityPreset& preset) {
+    ActivityPreset sanitized = preset;
+
+    if (!IsDiscordUrlLengthValid(sanitized.detailsUrl)) {
+        sanitized.detailsUrl.clear();
+    }
+    if (!IsDiscordUrlLengthValid(sanitized.stateUrl)) {
+        sanitized.stateUrl.clear();
+    }
+    if (!IsDiscordUrlLengthValid(sanitized.assets.largeUrl)) {
+        sanitized.assets.largeUrl.clear();
+    }
+    if (!IsDiscordUrlLengthValid(sanitized.assets.smallUrl)) {
+        sanitized.assets.smallUrl.clear();
+    }
+
+    sanitized.buttons.erase(
+        std::remove_if(
+            sanitized.buttons.begin(),
+            sanitized.buttons.end(),
+            [](const ActivityButton& button) { return !IsDiscordUrlLengthValid(button.url); }),
+        sanitized.buttons.end());
+
+    return sanitized;
+}
+
 ActivityType ParseActivityType(std::string_view value, ActivityType fallback) {
     if (value == "playing") {
         return ActivityType::Playing;

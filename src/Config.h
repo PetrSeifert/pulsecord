@@ -17,7 +17,7 @@ struct BrowserDetectionConfig {
     bool enabled = true;
     unsigned int staleAfterMs = 45000;
     std::string fallbackPreset = "Idle";
-    std::vector<std::string> supportedSites = {"crunchyroll", "hidive", "9anime"};
+    std::vector<std::string> supportedSites = {"crunchyroll", "hidive", "netflix", "9anime"};
 };
 
 struct AppConfig {
