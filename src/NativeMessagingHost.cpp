@@ -1,9 +1,12 @@
 #include "BrowserActivityProtocol.h"
 
 #include <array>
+#include <cstdlib>
 #include <cstdint>
 #include <filesystem>
+#include <fcntl.h>
 #include <fstream>
+#include <io.h>
 #include <iostream>
 #include <string>
 
@@ -31,21 +34,41 @@ void LogLine(const std::string& line) {
     }
 }
 
-bool ReadNativeMessage(std::istream& input, std::string& message) {
+enum class NativeMessageReadResult {
+    Ok,
+    Closed,
+    Failed,
+};
+
+bool ConfigureNativeStdio() {
+    return _setmode(_fileno(stdin), _O_BINARY) != -1 &&
+           _setmode(_fileno(stdout), _O_BINARY) != -1;
+}
+
+NativeMessageReadResult ReadNativeMessage(std::istream& input, std::string& message) {
     std::uint32_t size = 0;
     if (!input.read(reinterpret_cast<char*>(&size), sizeof(size))) {
-        LogLine("Native host stdin closed before a message length was read.");
-        return false;
+        if (input.eof()) {
+            return NativeMessageReadResult::Closed;
+        }
+
+        LogLine("Native host failed while reading the next message length.");
+        return NativeMessageReadResult::Failed;
     }
 
     if (size > drpc::kMaxBrowserActivityMessageBytes) {
         LogLine("Rejected native message larger than the supported maximum.");
         std::cerr << "Rejected native message larger than the supported maximum." << std::endl;
-        return false;
+        return NativeMessageReadResult::Failed;
     }
 
     message.assign(size, '\0');
-    return static_cast<bool>(input.read(message.data(), static_cast<std::streamsize>(size)));
+    if (!input.read(message.data(), static_cast<std::streamsize>(size))) {
+        LogLine("Native host stdin closed before the full message body was read.");
+        return NativeMessageReadResult::Failed;
+    }
+
+    return NativeMessageReadResult::Ok;
 }
 
 bool WriteNativeResponse(std::ostream& output, bool ok, std::string_view error) {
@@ -103,12 +126,29 @@ bool ForwardToTray(const std::string& payload, std::string& error) {
 
 int main() {
     std::ios::sync_with_stdio(false);
+    if (!ConfigureNativeStdio()) {
+        LogLine("Failed to switch native host stdio into binary mode.");
+        return 1;
+    }
+
     LogLine("Native host started.");
+    bool processedAnyMessages = false;
 
     while (true) {
         std::string incoming;
-        if (!ReadNativeMessage(std::cin, incoming)) {
+        switch (ReadNativeMessage(std::cin, incoming)) {
+        case NativeMessageReadResult::Ok:
+            processedAnyMessages = true;
             break;
+        case NativeMessageReadResult::Closed:
+            LogLine(processedAnyMessages
+                ? "Native host input stream closed by the browser."
+                : "Native host connected without sending a message.");
+            LogLine("Native host exiting.");
+            return 0;
+        case NativeMessageReadResult::Failed:
+            LogLine("Native host exiting after a read failure.");
+            return 1;
         }
 
         drpc::BrowserActivitySnapshot snapshot;
@@ -134,7 +174,4 @@ int main() {
             return 1;
         }
     }
-
-    LogLine("Native host exiting.");
-    return 0;
 }
